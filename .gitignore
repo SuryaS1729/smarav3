@@ -34,3 +34,8 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+
+# Platform-specific build folders (if generated/not source)
+android/
+ios/
