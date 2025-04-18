@@ -1,16 +1,31 @@
 import { useEffect, useState } from "react";
-import { View, TextInput, Button, FlatList, Text, RefreshControl } from "react-native";
+import {
+  View,
+  TextInput,
+  Button,
+  FlatList,
+  Text,
+  RefreshControl,
+  StyleSheet,
+} from "react-native";
 import * as SQLite from "expo-sqlite";
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView } from "react-native-safe-area-context";
-const db = SQLite.openDatabaseSync("smara.db");
-import * as FileSystem from 'expo-file-system';
+import { useWordStore } from "@/store/WordStore"; // Adjust if path differs
 
-console.log("SQLite path:", FileSystem.documentDirectory + "SQLite/smara.db");
+const db = SQLite.openDatabaseSync("smara.db");
+
+type WordEntry = {
+  word: string;
+  createdAt: number;
+};
+
 export default function WordsScreen() {
   const [text, setText] = useState("");
-  const [words, setWords] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+
+  const words = useWordStore((state) => state.words);
+  const setWords = useWordStore((state) => state.setWords);
+  const addWord = useWordStore((state) => state.addWord);
+  const clearWords = useWordStore((state) => state.clearWords);
 
   useEffect(() => {
     (async () => {
@@ -26,40 +41,45 @@ export default function WordsScreen() {
   }, []);
 
   const loadWords = async () => {
-    const result = await db.getAllAsync<{ word: string }>(
-      "SELECT word FROM Words ORDER BY createdAt DESC"
+    const result = await db.getAllAsync<WordEntry>(
+      "SELECT word, createdAt FROM Words ORDER BY createdAt DESC"
     );
-    setWords(result.map(row => row.word));
+    setWords(result);
   };
 
   const insertWord = async () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const newWord = {
+      word: trimmed,
+      createdAt: Date.now(),
+    };
+
     await db.runAsync(
       "INSERT INTO Words (word, createdAt) VALUES (?, ?)",
-      [trimmed, Date.now()]
+      [newWord.word, newWord.createdAt]
     );
+
+    addWord(newWord);
     setText("");
-    await loadWords();
+  };
+
+  const deleteAllWords = async () => {
+    await db.execAsync("DELETE FROM Words");
+    clearWords();
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, padding: 20 }}>
-       <StatusBar translucent style="dark" />
-
+    <View style={styles.container}>
       <TextInput
         placeholder="Type a word"
         value={text}
         onChangeText={setText}
-        style={{
-          borderWidth: 1,
-          borderColor: "#ccc",
-          padding: 10,
-          marginBottom: 10,
-          borderRadius: 5,
-        }}
+        style={styles.input}
       />
       <Button title="Save Word" onPress={insertWord} />
+
       <FlatList
         data={words}
         keyExtractor={(item, index) => index.toString()}
@@ -74,13 +94,29 @@ export default function WordsScreen() {
           />
         }
         renderItem={({ item }) => (
-          <Text style={{ paddingVertical: 10 }}>{item}</Text>
+          <Text style={styles.wordItem}>{item.word}</Text>
         )}
       />
-      <Button title="Clear All" onPress={async () => {
-        await db.execAsync("DELETE FROM Words");
-        await loadWords();
-      }} />
-    </SafeAreaView>
+
+      <Button title="Clear All" color="#b91c1c" onPress={deleteAllWords} />
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
+  },
+  wordItem: {
+    paddingVertical: 10,
+    fontSize: 16,
+  },
+});

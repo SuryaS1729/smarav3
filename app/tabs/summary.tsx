@@ -13,7 +13,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const db = SQLite.openDatabaseSync("smara.db");
 
 const GOOGLE_API_KEY = "AIzaSyCe1QPsd7uZNKq0_jsN-MqR2ZCIZ9i1yhY";
-const GNEWS_API_KEY = "d3c25a1c19a64d5b10ef0db531f4966d"; // <-- Sign up at https://gnews.io/
+const GNEWS_API_KEY = "d3c25a1c19a64d5b10ef0db531f4966d"; 
 
 export default function SummaryScreen() {
   const [words, setWords] = useState<string[]>([]);
